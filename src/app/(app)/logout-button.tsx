@@ -12,7 +12,7 @@ export function LogoutButton() {
   }
 
   return (
-    <button className="rounded-md border border-neutral-300 px-3 py-2 text-sm hover:bg-neutral-100" onClick={logout} type="button">
+    <button className="inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-slate-700 px-3 text-sm font-medium text-slate-100 hover:bg-slate-800" onClick={logout} type="button">
       Salir
     </button>
   );

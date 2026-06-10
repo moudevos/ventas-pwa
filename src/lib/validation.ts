@@ -102,6 +102,26 @@ export const prepareOrderSchema = z.object({
   observation: optionalTrimmedString,
 });
 
+export const uploadScopeSchema = z.enum(["PRODUCT_IMAGE", "ORDER_IMAGE", "INVENTORY_IMAGE", "EVIDENCE_IMAGE"]);
+
+export const uploadPresignSchema = z.object({
+  filename: z.string().trim().min(1),
+  contentType: z.enum(["image/jpeg", "image/png", "image/webp"]),
+  size: z.number().int().positive().max(3 * 1024 * 1024),
+  scope: uploadScopeSchema,
+  entityId: uuidSchema.optional(),
+});
+
+export const uploadCompleteSchema = z.object({
+  scope: uploadScopeSchema,
+  entityId: uuidSchema.optional(),
+  fileKey: z.string().trim().min(1),
+  publicUrl: z.url(),
+  contentType: z.enum(["image/jpeg", "image/png", "image/webp"]),
+  size: z.number().int().positive().max(3 * 1024 * 1024),
+  originalName: z.string().trim().min(1),
+});
+
 export const createOrderSchema = z.object({
   clientId: uuidSchema.optional(),
   client: clientSchema.optional(),
@@ -163,6 +183,7 @@ export const productSchema = z.object({
   basePrice: z.number().nonnegative(),
   stockOnHand: z.number().int().nonnegative().default(0),
   minStock: z.number().int().nonnegative().default(0),
+  primaryImageUrl: z.url().nullable().optional(),
   status: z.enum(["active", "inactive"]).default("active"),
 });
 

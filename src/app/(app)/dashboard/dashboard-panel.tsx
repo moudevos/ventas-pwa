@@ -81,16 +81,22 @@ export function DashboardPanel() {
   return (
     <section>
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <h1 className="text-2xl font-semibold">Dashboard</h1>
-        <Link className="inline-flex h-10 items-center gap-2 rounded-md bg-neutral-950 px-4 text-white" href="/orders/new">
+        <h1 className="text-xl font-semibold md:text-2xl">Dashboard</h1>
+        <Link className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-neutral-950 px-4 text-white" href="/orders/new">
           <Plus size={17} /> Crear orden
         </Link>
       </div>
-      <div className="mt-6 grid gap-6 xl:grid-cols-[2fr_1fr]">
-        <div className="space-y-6">
-          <details className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm" open>
+      <div className="mt-4 flex gap-3 overflow-x-auto pb-1 md:hidden">
+        <MetricCard label="Ventas hoy" value={money(summary.salesToday)} tone="emerald" />
+        <MetricCard label="Pedidos" value={summary.total} tone="indigo" />
+        <MetricCard label="Pagados" value={summary.paidOrdersCount} tone="sky" />
+        <MetricCard label="Stock bajo" value={summary.lowStock.length} tone="rose" />
+      </div>
+      <div className="mt-4 grid gap-4 xl:grid-cols-[2fr_1fr] md:mt-6 md:gap-6">
+        <div className="space-y-4 md:space-y-6">
+          <details className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm md:p-5" open>
             <summary className="cursor-pointer font-semibold text-slate-900">Panel Ventas</summary>
-            <div className="mt-4 grid gap-4 md:grid-cols-3">
+            <div className="mt-4 grid gap-3 sm:grid-cols-2 md:grid-cols-3 md:gap-4">
               <MetricCard label="Ventas hoy" value={money(summary.salesToday)} tone="emerald" />
               <MetricCard label="Ventas semana" value={money(summary.salesWeek)} tone="indigo" />
               <MetricCard label="Tienda hoy" value={money(summary.storeSalesToday)} href="/sales/history" tone="emerald" />
@@ -100,9 +106,9 @@ export function DashboardPanel() {
             </div>
           </details>
 
-          <details className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm" open>
+          <details className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm md:p-5" open>
             <summary className="cursor-pointer font-semibold text-slate-900">Panel Pedidos</summary>
-            <div className="mt-4 grid gap-4 md:grid-cols-3">
+            <div className="mt-4 grid gap-3 sm:grid-cols-2 md:grid-cols-3 md:gap-4">
               {[
                 { href: "/orders", label: "Total pedidos", value: summary.total, tone: "slate" },
                 { href: "/orders?status=CREATED", label: "Creados", value: summary.created, tone: "indigo" },
@@ -118,7 +124,7 @@ export function DashboardPanel() {
           </details>
         </div>
 
-        <aside className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <aside className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm md:p-5">
           <h2 className="font-semibold">Alertas</h2>
           <div className="mt-3 grid grid-cols-3 rounded-lg bg-slate-100 p-1 text-xs">
             <TabButton active={alertTab === "stock"} label="Stock" onClick={() => setAlertTab("stock")} />
@@ -151,11 +157,11 @@ export function DashboardPanel() {
         </aside>
       </div>
 
-      <section className="mt-6 rounded-lg border border-neutral-200 bg-white p-5">
+      <section className="mt-4 rounded-xl border border-neutral-200 bg-white p-4 md:mt-6 md:p-5">
         <h2 className="font-semibold">Proximos envios</h2>
         <div className="mt-4 grid gap-2">
           {[...summary.overdue, ...summary.dueSoon].sort((a, b) => new Date(a.scheduledShippingDate ?? 0).getTime() - new Date(b.scheduledShippingDate ?? 0).getTime()).map((order) => (
-            <Link className="flex items-center justify-between rounded-md border border-neutral-200 p-3 hover:bg-neutral-50" href={`/orders/${order.id}`} key={order.id}>
+            <Link className="flex flex-col gap-2 rounded-lg border border-neutral-200 p-3 hover:bg-neutral-50 sm:flex-row sm:items-center sm:justify-between" href={`/orders/${order.id}`} key={order.id}>
               <span>
                 <span className="block font-medium">{order.code}</span>
                 <span className="text-xs text-neutral-500">{order.scheduledShippingDate ? new Date(order.scheduledShippingDate).toLocaleDateString() : "Sin fecha"}</span>
@@ -170,7 +176,7 @@ export function DashboardPanel() {
         </div>
       </section>
 
-      <section className="mt-6 grid gap-4 xl:grid-cols-3">
+      <section className="mt-4 grid gap-3 md:mt-6 md:gap-4 xl:grid-cols-3">
         {ORDER_STATUS_FLOW.map((status) => (
           <article className="rounded-lg border border-neutral-200 bg-white p-4" key={status}>
             <h3 className="font-semibold">{getOrderStatusLabel(status)}</h3>
@@ -217,7 +223,7 @@ function MetricCard({ href, label, tone = "slate", value }: { href?: string; lab
       <p className="mt-2 text-3xl font-semibold">{value}</p>
     </>
   );
-  const className = `rounded-xl border p-5 transition ${classes[tone] ?? classes.slate}`;
+  const className = `min-w-36 rounded-xl border p-4 transition md:min-w-0 md:p-5 ${classes[tone] ?? classes.slate}`;
   return href ? <Link className={`${className} hover:shadow-sm`} href={href}>{content}</Link> : <article className={className}>{content}</article>;
 }
 

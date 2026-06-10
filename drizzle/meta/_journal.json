@@ -57,6 +57,13 @@
       "when": 1780871769217,
       "tag": "0007_talented_firelord",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1781131828124,
+      "tag": "0008_absent_dexter_bennett",
+      "breakpoints": true
     }
   ]
 }

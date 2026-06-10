@@ -15,6 +15,7 @@ El MVP usa Next.js 16 App Router con Route Handlers como backend. La sesion se f
 - `bcryptjs`
 - `zod`
 - Pusher realtime
+- Cloudflare R2 compatible S3 para imagenes
 - SweetAlert2
 - lucide-react
 - Vercel
@@ -39,6 +40,7 @@ src/
     api/clients
     api/orders
     api/products
+    api/uploads
     api/audit
     api/pusher
   components/
@@ -46,6 +48,7 @@ src/
     alerts.ts
     api-client.ts
     order-status.ts
+    image-compress.ts
     pusher-client.ts
     validation.ts
   server/
@@ -57,7 +60,10 @@ src/
     orders/
     realtime/
     seed/
+    storage/
 drizzle/
+public/
+  icons/
 ```
 
 ## Variables De Entorno
@@ -77,6 +83,12 @@ SEED_ADMIN_NAME="Admin"
 
 FORCE_SECURE_COOKIES="false"
 UBIGEO_API_URL=""
+
+R2_ACCOUNT_ID=""
+R2_ACCESS_KEY_ID=""
+R2_SECRET_ACCESS_KEY=""
+R2_BUCKET=""
+R2_PUBLIC_BASE_URL=""
 ```
 
 En local HTTP la cookie no usa `Secure`. En Vercel/HTTPS se marca como segura.
@@ -125,6 +137,37 @@ Eventos usados:
 
 Si Pusher no esta configurado, el dashboard usa polling cada 30 segundos.
 
+## Cloudflare R2
+
+Las imagenes se suben directo desde el navegador a Cloudflare R2 mediante URL firmada. El JWT nunca se expone; el backend valida sesion y crea la URL temporal.
+
+Variables requeridas:
+
+- `R2_ACCOUNT_ID`
+- `R2_ACCESS_KEY_ID`
+- `R2_SECRET_ACCESS_KEY`
+- `R2_BUCKET`
+- `R2_PUBLIC_BASE_URL`
+
+Endpoints implementados:
+
+- `POST /api/uploads/presign`: valida sesion, tipo, tamano y scope; devuelve URL firmada.
+- `POST /api/uploads/complete`: guarda metadata en `uploaded_files`, audita y actualiza `products.primaryImageUrl` si el scope es `PRODUCT_IMAGE`.
+- `DELETE /api/uploads/[id]`: solo admin, elimina metadata y objeto R2.
+
+Scopes permitidos:
+
+- `PRODUCT_IMAGE`
+- `ORDER_IMAGE`
+- `INVENTORY_IMAGE`
+- `EVIDENCE_IMAGE`
+
+Restricciones actuales:
+
+- Formatos: `image/jpeg`, `image/png`, `image/webp`.
+- Tamano maximo despues de compresion: 3 MB.
+- Compresion cliente: `src/lib/image-compress.ts`, maximo 1600 px por lado.
+
 ## Seed
 
 ```bash
@@ -148,6 +191,7 @@ Admin inicial:
 - Usuarios admin: `/admin/users`, endpoints `/api/admin/users`.
 - Clientes: `/clients`, endpoints `/api/clients`, `/api/clients/find`, `/api/clients/upsert`.
 - Productos: `/products`, endpoints `/api/products`.
+- Imagenes de productos: modal de edicion en `/products`, endpoints `/api/uploads/*`.
 - Pedidos: `/orders`, `/orders/new`, `/orders/[id]`.
 - Envios: `/shipping`.
 - Auditoria: `/audit`, endpoint `GET /api/audit` solo admin.
@@ -312,6 +356,20 @@ El dashboard tiene dos paneles desplegables:
 
 Tambien muestra proximos envios ordenados por fecha con indicador: vencido, hoy, 24h o programado.
 
+## PWA Y Mobile
+
+La app incluye manifest en `src/app/manifest.ts`, iconos PNG en `public/icons` y metadata para instalacion en Android/iOS.
+
+UX movil actual:
+
+- Shell responsive con sidebar desktop.
+- Barra inferior movil para Inicio, Nuevo pedido, Pedidos, Ventas y Mas.
+- Safe-area para PWA instalada.
+- Tablas con contenedor horizontal controlado cuando la densidad de columnas lo exige.
+- Modales operativos con alto maximo `90dvh`.
+
+Pendiente: convertir todas las tablas densas a cards nativas en movil.
+
 ## Roles
 
 - `admin`: administra usuarios, ve auditoria y opera pedidos.
@@ -355,25 +413,32 @@ Se registra:
 - [ ] Revisar dashboard.
 - [ ] Revisar auditoria con admin.
 - [ ] Validar actualizacion realtime o polling.
+- [ ] Instalar como PWA en Android Chrome y abrir en modo standalone.
+- [ ] Probar barra inferior movil y drawer "Mas".
+- [ ] Crear producto, editarlo y subir imagen WebP/JPG/PNG.
+- [ ] Verificar metadata en `uploaded_files` y miniatura en `/products`.
 
 ## Deploy Vercel
 
 - [ ] Configurar variables de entorno.
+- [ ] Configurar variables R2 y dominio publico/CORS del bucket.
 - [ ] Ejecutar migraciones contra Neon.
 - [ ] Ejecutar seed.
 - [ ] Validar `npm run build`.
 - [ ] Deploy.
 - [ ] Probar cookie segura en HTTPS.
 - [ ] Probar Pusher en produccion.
+- [ ] Probar upload R2 desde dominio de Vercel.
 
 ## Pendientes Tecnicos
 
 - Ocultar opciones de sidebar segun rol.
 - Pantallas reales de ventas/reportes avanzados.
-- Storage real para evidencias con Vercel Blob o compatible.
+- Integrar el uploader R2 en evidencias de pedido e imagenes de inventario.
 - Integracion completa de API externa de ubigeo.
 - Tests automatizados de reglas de transicion.
 - Retirar endpoints legacy cuando no haya clientes antiguos usandolos.
+- Cards moviles completas para todas las tablas operativas.
 
 ## Canal Venta En Tienda
 

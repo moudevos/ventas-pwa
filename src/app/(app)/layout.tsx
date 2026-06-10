@@ -7,5 +7,5 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const session = await getSession();
   if (!session) redirect("/login");
 
-  return <AppShell email={session.email}>{children}</AppShell>;
+  return <AppShell email={session.email} role={session.role}>{children}</AppShell>;
 }

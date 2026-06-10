@@ -20,7 +20,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const auth = await requireUser(["admin", "promoter"]);
+  const auth = await requireUser(["admin"]);
   if ("error" in auth) return error(auth.error, auth.status);
   try {
     const body = productSchema.parse(await request.json());
@@ -33,6 +33,7 @@ export async function POST(request: Request) {
         basePrice: body.basePrice.toFixed(2),
         stockOnHand: body.stockOnHand,
         minStock: body.minStock,
+        primaryImageUrl: body.primaryImageUrl ?? null,
         status: body.status,
         active: body.status === "active",
         createdById: auth.user.id,

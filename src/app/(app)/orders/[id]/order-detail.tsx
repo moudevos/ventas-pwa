@@ -227,7 +227,7 @@ function ActionButton({ icon, label, onClick, pending }: { icon: React.ReactNode
 function ModalFrame({ children, onClose, title }: { children: React.ReactNode; onClose: () => void; title: string }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4">
-      <div className="max-h-[88vh] w-full max-w-2xl overflow-y-auto rounded-xl border border-slate-200 bg-white p-5 shadow-xl">
+      <div className="max-h-[90dvh] w-full max-w-2xl overflow-y-auto rounded-xl border border-slate-200 bg-white p-5 shadow-xl">
         <div className="mb-4 flex items-center justify-between gap-3">
           <h2 className="text-lg font-semibold">{title}</h2>
           <button className="rounded-md border px-3 py-1 text-sm" onClick={onClose} type="button">Cerrar</button>

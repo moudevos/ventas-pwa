@@ -8,7 +8,7 @@ import { products } from "@/server/db/schema";
 import { error, ok, validationError } from "@/server/http/responses";
 
 export async function PATCH(request: Request, ctx: { params: Promise<{ id: string }> }) {
-  const auth = await requireUser(["admin", "promoter"]);
+  const auth = await requireUser(["admin"]);
   if ("error" in auth) return error(auth.error, auth.status);
   try {
     const { id } = await ctx.params;
@@ -22,6 +22,7 @@ export async function PATCH(request: Request, ctx: { params: Promise<{ id: strin
       basePrice: body.basePrice === undefined ? undefined : body.basePrice.toFixed(2),
       stockOnHand: body.stockOnHand,
       minStock: body.minStock,
+      primaryImageUrl: body.primaryImageUrl,
       status: body.status,
       active: body.status ? body.status === "active" : undefined,
       updatedAt: new Date(),

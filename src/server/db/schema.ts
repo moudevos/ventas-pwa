@@ -115,6 +115,7 @@ export const products = pgTable(
     stockOnHand: integer("stock_on_hand").notNull().default(0),
     stockReserved: integer("stock_reserved").notNull().default(0),
     minStock: integer("min_stock").notNull().default(0),
+    primaryImageUrl: text("primary_image_url"),
     status: productStatusEnum("status").notNull().default("active"),
     active: boolean("active").notNull().default(true),
     createdById: uuid("created_by_id").references(() => users.id, { onDelete: "set null" }),
@@ -312,6 +313,28 @@ export const orderEvidence = pgTable(
   },
   (table) => [index("order_evidence_order_idx").on(table.orderId)],
 );
+
+export const uploadedFiles = pgTable(
+  "uploaded_files",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    scope: text("scope").notNull(),
+    entityId: uuid("entity_id"),
+    fileKey: text("file_key").notNull(),
+    publicUrl: text("public_url").notNull(),
+    contentType: text("content_type").notNull(),
+    size: integer("size").notNull(),
+    originalName: text("original_name").notNull(),
+    uploadedById: uuid("uploaded_by_id").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("uploaded_files_key_idx").on(table.fileKey),
+    index("uploaded_files_entity_idx").on(table.scope, table.entityId),
+  ],
+);
+
+export type UploadedFile = typeof uploadedFiles.$inferSelect;
 
 export const auditLogs = pgTable(
   "audit_logs",
