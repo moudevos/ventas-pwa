@@ -5,10 +5,10 @@ const transitions: Record<OrderStatus, OrderStatus[]> = {
   REGISTERED: ["PAID", "OBSERVED", "CANCELLED"],
   PAID: ["PRODUCTS_INCOMPLETE", "PRODUCTS_COMPLETE", "OBSERVED", "CANCELLED"],
   PRODUCTS_INCOMPLETE: ["PRODUCTS_COMPLETE", "OBSERVED", "CANCELLED"],
-  PRODUCTS_COMPLETE: ["READY_TO_SHIP", "OBSERVED", "CANCELLED"],
+  PRODUCTS_COMPLETE: ["READY_TO_SHIP", "SHIPPED", "OBSERVED", "CANCELLED"],
   PAYMENT_CONFIRMED: ["SCHEDULED", "OBSERVED", "CANCELLED"],
   SCHEDULED: ["READY_TO_SHIP", "OBSERVED", "CANCELLED"],
-  READY_TO_SHIP: ["PACKAGING_PAID", "OBSERVED", "CANCELLED"],
+  READY_TO_SHIP: ["PACKAGING_PAID", "SHIPPED", "OBSERVED", "CANCELLED"],
   PACKAGING_PAID: ["SHIPPED", "OBSERVED", "CANCELLED"],
   SHIPPED: ["CLOSED", "OBSERVED"],
   DELIVERED: ["CLOSED", "OBSERVED"],
@@ -48,6 +48,7 @@ export function assertOrderTransition(params: {
   scheduledShippingAt?: Date | null;
   packagedAt?: Date | null;
   shippingProviderName?: string | null;
+  shippingType?: string | null;
   deliveredAt?: Date | null;
   customerReceivedConfirmed?: boolean;
   carrierDeliveredConfirmed?: boolean;
@@ -70,8 +71,17 @@ export function assertOrderTransition(params: {
   if (params.to === "PACKAGING_PAID" && !params.packagingPaymentConfirmed) {
     throw new Error("Packaging payment must be registered before marking ready to ship");
   }
-  if (params.to === "SHIPPED" && !params.shippingProviderName) {
-    throw new Error("Shipping provider is required before shipping");
+  if (params.to === "SHIPPED" && !params.productPaymentConfirmed) {
+    throw new Error("El pedido debe estar pagado antes de enviarse");
+  }
+  if (params.to === "SHIPPED" && params.hasMissingProducts) {
+    throw new Error("No se puede enviar: el pedido aun tiene productos pendientes");
+  }
+  if (params.to === "SHIPPED" && !params.packagingPaymentConfirmed) {
+    throw new Error("No se puede enviar: falta confirmar el pago de embalaje");
+  }
+  if (params.to === "SHIPPED" && params.shippingType !== "PICKUP" && !params.shippingProviderName) {
+    throw new Error("Selecciona el proveedor de envio antes de enviar");
   }
   if (params.to === "CLOSED" && (!params.customerReceivedConfirmed || !params.carrierDeliveredConfirmed)) {
     throw new Error("Customer and carrier delivery confirmations are required before closing");

@@ -18,7 +18,7 @@ export async function POST(request: Request) {
   if ("error" in auth) return error(auth.error, auth.status);
   try {
     const body = clientSchema.parse(await request.json());
-    const [client] = await db.insert(clients).values({ ...body, createdById: auth.user.id }).returning();
+    const [client] = await db.insert(clients).values({ ...body, email: body.email ?? "clientegenerico@generico.com", createdById: auth.user.id }).returning();
     await audit({ actorId: auth.user.id, action: "create", entity: "client", entityId: client.id, after: client, request });
     return created(client);
   } catch (err) {

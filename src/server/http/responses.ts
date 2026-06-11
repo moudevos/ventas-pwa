@@ -14,7 +14,7 @@ export function error(message: string, status = 400, details?: unknown) {
 
 export function validationError(err: unknown) {
   if (err instanceof ZodError) {
-    return error("Invalid request body", 422, err.flatten());
+    return error("Revisa los datos del formulario", 422, err.flatten());
   }
-  return error("Invalid request body", 422);
+  return error("Revisa los datos del formulario", 422);
 }

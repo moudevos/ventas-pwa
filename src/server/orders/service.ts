@@ -66,7 +66,7 @@ export async function createOrder(input: {
       firstName: input.client.firstName,
       lastName: input.client.lastName,
       name: input.client.name,
-      email: input.client.email,
+      email: input.client.email ?? "clientegenerico@generico.com",
       phone: input.client.phone,
       address: input.client.address ?? input.client.deliveryAddress,
       deliveryReference: input.client.deliveryReference ?? input.client.reference,
@@ -90,8 +90,8 @@ export async function createOrder(input: {
   const phone = (input.client?.phone ?? input.client?.documentId ?? "000000000").replace(/\D/g, "") || "000000000";
   const code = `${phone}-${String(rowCount.value + 1).padStart(5, "0")}`;
   const subtotal = input.items?.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0) ?? input.totalAmount;
-  const tax = input.items?.length ? subtotal * 0.18 : 0;
-  const total = input.items?.length ? subtotal + tax : input.totalAmount;
+  const tax = 0;
+  const total = subtotal;
 
   const [order] = await db
     .insert(orders)
@@ -135,8 +135,8 @@ export async function createOrder(input: {
       await db.update(orderItems).set({
         reservedQuantity: reservation.reservedQuantity,
         missingQuantity: reservation.missingQuantity,
-        fulfilledQuantity: reservation.reservedQuantity,
-        isComplete: reservation.missingQuantity === 0,
+        fulfilledQuantity: 0,
+        isComplete: false,
         updatedAt: new Date(),
       }).where(eq(orderItems.id, orderItem.id));
     }
@@ -182,6 +182,7 @@ export async function changeOrderStatus(input: {
     scheduledShippingAt: before.scheduledShippingDate ?? before.scheduledShippingAt,
     packagedAt: before.packagedAt,
     shippingProviderName: before.providerName ?? before.shippingProviderName ?? shipment?.carrier,
+    shippingType: before.shippingType ?? before.shippingProviderType,
     deliveredAt: shipment?.deliveredAt ?? null,
     customerReceivedConfirmed: before.customerReceivedConfirmed,
     carrierDeliveredConfirmed: before.carrierDeliveredConfirmed,
@@ -217,7 +218,7 @@ export async function changeOrderStatus(input: {
 export async function upsertShipment(input: {
   orderId: string;
   actorId: string;
-  providerType?: "MOTORIZED" | "COURIER";
+  providerType?: "MOTORIZED" | "COURIER" | "PICKUP";
   providerName?: string;
   carrier?: string;
   trackingNumber?: string;

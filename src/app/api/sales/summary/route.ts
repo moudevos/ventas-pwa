@@ -1,14 +1,24 @@
-import { desc } from "drizzle-orm";
+import { desc, inArray } from "drizzle-orm";
 
 import { requireUser } from "@/server/auth/guards";
 import { db } from "@/server/db";
-import { sales } from "@/server/db/schema";
+import { orders, sales } from "@/server/db/schema";
 import { error, ok } from "@/server/http/responses";
 
 export async function GET() {
   const auth = await requireUser();
   if ("error" in auth) return error(auth.error, auth.status);
-  const rows = await db.select().from(sales).orderBy(desc(sales.saleDate)).limit(500);
+  const storeRows = await db.select().from(sales).orderBy(desc(sales.saleDate)).limit(500);
+  const orderRows = await db
+    .select()
+    .from(orders)
+    .where(inArray(orders.status, ["PAID", "PRODUCTS_INCOMPLETE", "PRODUCTS_COMPLETE", "READY_TO_SHIP", "PACKAGING_PAID", "SHIPPED", "CLOSED"]))
+    .orderBy(desc(orders.productPaymentDate))
+    .limit(500);
+  const rows = [
+    ...storeRows.map((sale) => ({ saleDate: sale.saleDate, totalAmount: sale.totalAmount })),
+    ...orderRows.map((order) => ({ saleDate: order.productPaymentDate ?? order.createdAt, totalAmount: order.productPaymentAmount ?? order.totalProductsAmount ?? order.total ?? "0" })),
+  ];
   const now = new Date();
   const startOfDay = new Date(now);
   startOfDay.setHours(0, 0, 0, 0);

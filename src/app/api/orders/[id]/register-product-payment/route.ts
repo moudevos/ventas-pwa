@@ -31,6 +31,12 @@ export async function POST(request: Request, ctx: { params: Promise<{ id: string
         scheduledShippingAt: scheduledShippingDate,
         scheduledShippingDate,
         packagingCost: body.packagingCost.toFixed(2),
+        packagingPaymentAmount: body.packagingPaid ? body.packagingCost.toFixed(2) : null,
+        packagingPaymentMethod: body.packagingPaid ? (body.packagingPaymentMethod ?? body.productPaymentMethod) : null,
+        packagingPaymentDate: body.packagingPaid ? parseOperationalDate(body.packagingPaymentDate ?? body.productPaymentDate) : null,
+        packagingPaymentConfirmed: body.packagingPaid,
+        packagingPaymentConfirmedById: body.packagingPaid ? auth.user.id : null,
+        packagingPaymentConfirmedAt: body.packagingPaid ? new Date() : null,
         updatedAt: new Date(),
       })
       .where(eq(orders.id, id))

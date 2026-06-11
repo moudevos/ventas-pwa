@@ -11,8 +11,12 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   });
   const payload = (await response.json().catch(() => ({}))) as { data?: T; error?: { message?: string } };
   if (!response.ok) {
-    const detail = "details" in (payload.error ?? {}) ? JSON.stringify((payload.error as { details?: unknown }).details) : "";
-    throw new Error([payload.error?.message ?? "Request failed", detail].filter(Boolean).join(": "));
+    const details = (payload.error as { details?: { fieldErrors?: Record<string, string[]>; formErrors?: string[] } } | undefined)?.details;
+    const fieldMessages = details?.fieldErrors
+      ? Object.entries(details.fieldErrors).flatMap(([field, messages]) => messages.map((message) => `${field}: ${message}`))
+      : [];
+    const formMessages = details?.formErrors ?? [];
+    throw new Error([payload.error?.message ?? "No se pudo completar la solicitud", ...fieldMessages, ...formMessages].filter(Boolean).join(". "));
   }
   return payload.data as T;
 }
@@ -90,7 +94,7 @@ export type OrderDto = {
   packagingPaymentConfirmed?: boolean;
   shippingAddress?: string | null;
   scheduledShippingDate?: string | null;
-  shippingType?: "MOTORIZED" | "COURIER" | null;
+  shippingType?: "MOTORIZED" | "COURIER" | "PICKUP" | null;
   providerName?: string | null;
   trackingNumber?: string | null;
   deliveryOrderNumber?: string | null;

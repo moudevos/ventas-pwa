@@ -20,7 +20,7 @@ export async function POST(request: Request) {
       firstName: body.firstName,
       lastName: body.lastName,
       name: body.name,
-      email: body.email,
+      email: body.email ?? "clientegenerico@generico.com",
       phone: body.phone,
       address: body.address ?? body.deliveryAddress,
       deliveryReference: body.deliveryReference ?? body.reference,

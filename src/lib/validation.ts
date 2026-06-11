@@ -3,7 +3,7 @@ import { z } from "zod";
 export const uuidSchema = z.uuid();
 
 const emptyStringToUndefined = (value: unknown) =>
-  typeof value === "string" && value.trim() === "" ? undefined : value;
+  typeof value === "string" && (value.trim() === "" || value.trim() === "-") ? undefined : value;
 
 const optionalTrimmedString = z.preprocess(
   emptyStringToUndefined,
@@ -202,6 +202,9 @@ export const registerProductPaymentSchema = z.object({
   productPaymentDate: z.union([z.iso.date(), z.iso.datetime()]),
   scheduledShippingDate: z.union([z.iso.date(), z.iso.datetime()]).optional(),
   packagingCost: z.number().nonnegative().default(2),
+  packagingPaid: z.boolean().default(false),
+  packagingPaymentMethod: optionalTrimmedString,
+  packagingPaymentDate: z.union([z.iso.date(), z.iso.datetime()]).optional(),
   observation: optionalTrimmedString,
 });
 
@@ -214,17 +217,30 @@ export const markReadyToShipSchema = z.object({
 
 export const shipOrderSchema = z
   .object({
-  shippingType: z.enum(["MOTORIZED", "COURIER"]),
-  providerName: z.string().trim().min(1),
+  shippingType: z.enum(["MOTORIZED", "COURIER", "PICKUP"]),
+  providerName: optionalTrimmedString,
     trackingNumber: optionalTrimmedString,
     deliveryOrderNumber: optionalTrimmedString,
+    packagingPaymentAmount: z.number().positive().optional(),
+    packagingPaymentMethod: optionalTrimmedString,
+    packagingPaymentDate: z.union([z.iso.date(), z.iso.datetime()]).optional(),
+    observation: optionalTrimmedString,
   })
   .superRefine((value, ctx) => {
+    if (value.shippingType !== "PICKUP" && !value.providerName) {
+      ctx.addIssue({ code: "custom", path: ["providerName"], message: "Selecciona o escribe el proveedor de envio" });
+    }
     if (value.shippingType === "COURIER" && !value.trackingNumber) {
       ctx.addIssue({ code: "custom", path: ["trackingNumber"], message: "Tracking requerido para courier" });
     }
     if (value.shippingType === "MOTORIZED" && !value.deliveryOrderNumber) {
       ctx.addIssue({ code: "custom", path: ["deliveryOrderNumber"], message: "Numero de envio requerido para motorizado" });
+    }
+    if (value.packagingPaymentAmount && !value.packagingPaymentMethod) {
+      ctx.addIssue({ code: "custom", path: ["packagingPaymentMethod"], message: "Selecciona el metodo de pago del embalaje" });
+    }
+    if (value.packagingPaymentAmount && !value.packagingPaymentDate) {
+      ctx.addIssue({ code: "custom", path: ["packagingPaymentDate"], message: "Selecciona la fecha de pago del embalaje" });
     }
   });
 

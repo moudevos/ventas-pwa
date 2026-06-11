@@ -1,0 +1,1 @@
+ALTER TYPE "public"."shipping_provider_type" ADD VALUE 'PICKUP';

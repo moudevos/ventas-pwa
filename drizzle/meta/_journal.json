@@ -64,6 +64,13 @@
       "when": 1781131828124,
       "tag": "0008_absent_dexter_bennett",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1781141972315,
+      "tag": "0009_special_doctor_faustus",
+      "breakpoints": true
     }
   ]
 }

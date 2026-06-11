@@ -21,7 +21,7 @@ type OrderDetail = OrderDto & {
   packagingPaymentAmount?: string | null;
   packagingPaymentDate?: string | null;
   scheduledShippingDate?: string | null;
-  shippingType?: "MOTORIZED" | "COURIER" | null;
+  shippingType?: "MOTORIZED" | "COURIER" | "PICKUP" | null;
   providerName?: string | null;
   trackingNumber?: string | null;
   deliveryOrderNumber?: string | null;
@@ -35,7 +35,7 @@ type OrderDetail = OrderDto & {
 export function OrderDetail({ id }: { id: string }) {
   const [order, setOrder] = useState<OrderDetail | null>(null);
   const [pending, setPending] = useState(false);
-  const [modal, setModal] = useState<"payment" | "prepare" | "packaging" | "ship" | "close" | null>(null);
+  const [modal, setModal] = useState<"payment" | "prepare" | "ship" | "close" | null>(null);
 
   async function loadOrder() {
     setOrder(await api.get<OrderDetail>(`/api/orders/${id}`));
@@ -73,25 +73,12 @@ export function OrderDetail({ id }: { id: string }) {
         productPaymentDate,
         scheduledShippingDate: form.get("scheduledShippingDate") || undefined,
         packagingCost: Number(form.get("packagingCost") || 2),
+        packagingPaid: form.get("packagingPaid") === "on",
+        packagingPaymentMethod: form.get("packagingPaymentMethod") || undefined,
+        packagingPaymentDate: form.get("packagingPaymentDate") || productPaymentDate,
         observation: form.get("observation") || undefined,
       });
       await showToast("Pedido pagado");
-      setModal(null);
-    });
-  }
-
-  async function submitPackaging(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const form = new FormData(event.currentTarget);
-    const packagingPaymentAmount = Number(form.get("packagingPaymentAmount") || 0);
-    const packagingPaymentMethod = String(form.get("packagingPaymentMethod") || "");
-    const packagingPaymentDate = String(form.get("packagingPaymentDate") || "");
-    if (packagingPaymentAmount <= 0) return showError("Ingresa monto de embalaje");
-    if (!packagingPaymentMethod) return showError("Ingresa metodo de pago de embalaje");
-    if (!packagingPaymentDate) return showError("Ingresa fecha de pago de embalaje");
-    await runAction(async () => {
-      await api.post(`/api/orders/${id}/mark-ready-to-ship`, { packagingPaymentAmount, packagingPaymentMethod, packagingPaymentDate });
-      await showToast("Embalaje pagado");
       setModal(null);
     });
   }
@@ -121,11 +108,25 @@ export function OrderDetail({ id }: { id: string }) {
     const providerName = String(form.get("providerName") || "");
     const trackingNumber = String(form.get("trackingNumber") || "");
     const deliveryOrderNumber = String(form.get("deliveryOrderNumber") || "");
-    if (!providerName) return showError("Ingresa proveedor");
+    const packagingPaymentAmount = Number(form.get("packagingPaymentAmount") || 0);
+    const packagingPaymentMethod = String(form.get("packagingPaymentMethod") || "");
+    const packagingPaymentDate = String(form.get("packagingPaymentDate") || "");
+    if (shippingType !== "PICKUP" && !providerName) return showError("Ingresa proveedor");
     if (shippingType === "COURIER" && !trackingNumber) return showError("Tracking requerido para courier");
     if (shippingType === "MOTORIZED" && !deliveryOrderNumber) return showError("Numero de envio requerido para motorizado");
+    if (!order?.packagingPaymentConfirmed && packagingPaymentAmount <= 0) return showError("Confirma el pago de embalaje de S/ 2.00 antes de enviar");
+    if (!order?.packagingPaymentConfirmed && !packagingPaymentMethod) return showError("Selecciona metodo de pago del embalaje");
+    if (!order?.packagingPaymentConfirmed && !packagingPaymentDate) return showError("Selecciona fecha de pago del embalaje");
     await runAction(async () => {
-      await api.post(`/api/orders/${id}/ship`, { shippingType, providerName, trackingNumber, deliveryOrderNumber });
+      await api.post(`/api/orders/${id}/ship`, {
+        shippingType,
+        providerName: shippingType === "PICKUP" ? undefined : providerName,
+        trackingNumber,
+        deliveryOrderNumber,
+        packagingPaymentAmount: order?.packagingPaymentConfirmed ? undefined : packagingPaymentAmount,
+        packagingPaymentMethod: order?.packagingPaymentConfirmed ? undefined : packagingPaymentMethod,
+        packagingPaymentDate: order?.packagingPaymentConfirmed ? undefined : packagingPaymentDate,
+      });
       await showToast("Envio registrado");
       setModal(null);
     });
@@ -194,14 +195,9 @@ export function OrderDetail({ id }: { id: string }) {
         <article className="rounded-lg border border-neutral-200 bg-white p-5">
           <h2 className="font-semibold">Acciones</h2>
           <div className="mt-4 grid gap-2">
-            {order.status === "REGISTERED" ? <ActionButton icon={<CreditCard size={17} />} label="Registrar pago" onClick={() => setModal("payment")} pending={pending} /> : null}
-            {order.status === "CREATED" ? <ActionButton icon={<CreditCard size={17} />} label="Registrar pago" onClick={() => setModal("payment")} pending={pending} /> : null}
-            {["PAID", "PRODUCTS_INCOMPLETE", "PRODUCTS_COMPLETE"].includes(order.status) ? <ActionButton icon={<PackageCheck size={17} />} label="Alistar productos" onClick={() => setModal("prepare")} pending={pending} /> : null}
-            {order.status === "PAID" && order.hasMissingProducts ? <ActionButton icon={<PackageCheck size={17} />} label="Marcar incompleto" onClick={() => runAction(async () => { await api.post(`/api/orders/${id}/mark-products-incomplete`); })} pending={pending} /> : null}
-            {["PAID", "PRODUCTS_INCOMPLETE"].includes(order.status) && !order.hasMissingProducts ? <ActionButton icon={<PackageCheck size={17} />} label="Productos completos" onClick={() => runAction(async () => { await api.post(`/api/orders/${id}/complete-products`); })} pending={pending} /> : null}
-            {order.status === "PRODUCTS_COMPLETE" ? <ActionButton icon={<PackageCheck size={17} />} label="Listo para envio" onClick={() => runAction(async () => { await api.post(`/api/orders/${id}/ready-to-ship`); })} pending={pending} /> : null}
-            {order.status === "READY_TO_SHIP" ? <ActionButton icon={<PackageCheck size={17} />} label="Registrar embalaje" onClick={() => setModal("packaging")} pending={pending} /> : null}
-            {order.status === "PACKAGING_PAID" ? <ActionButton icon={<Truck size={17} />} label="Registrar envio" onClick={() => setModal("ship")} pending={pending} /> : null}
+            {["REGISTERED", "CREATED"].includes(order.status) ? <ActionButton icon={<CreditCard size={17} />} label="Pago de pedido" onClick={() => setModal("payment")} pending={pending} /> : null}
+            {["PAID", "PRODUCTS_INCOMPLETE", "PRODUCTS_COMPLETE"].includes(order.status) ? <ActionButton icon={<PackageCheck size={17} />} label="Alistar pedido" onClick={() => setModal("prepare")} pending={pending} /> : null}
+            {["PRODUCTS_COMPLETE", "READY_TO_SHIP", "PACKAGING_PAID"].includes(order.status) ? <ActionButton icon={<Truck size={17} />} label="Enviar / entregar" onClick={() => setModal("ship")} pending={pending} /> : null}
             {order.status === "SHIPPED" ? <ActionButton icon={<CheckCircle2 size={17} />} label="Cerrar pedido" onClick={() => setModal("close")} pending={pending} /> : null}
             {order.status === "CLOSED" ? <p className="text-sm text-neutral-500">Pedido cerrado. Solo lectura.</p> : null}
           </div>
@@ -209,8 +205,7 @@ export function OrderDetail({ id }: { id: string }) {
       </aside>
       {modal === "payment" ? <PaymentModal order={order} pending={pending} onClose={() => setModal(null)} onSubmit={submitPayment} /> : null}
       {modal === "prepare" ? <PrepareModal order={order} pending={pending} onClose={() => setModal(null)} onSubmit={submitPrepare} /> : null}
-      {modal === "packaging" ? <PackagingModal pending={pending} onClose={() => setModal(null)} onSubmit={submitPackaging} /> : null}
-      {modal === "ship" ? <ShipModal pending={pending} onClose={() => setModal(null)} onSubmit={submitShip} /> : null}
+      {modal === "ship" ? <ShipModal order={order} pending={pending} onClose={() => setModal(null)} onSubmit={submitShip} /> : null}
       {modal === "close" ? <CloseModal pending={pending} onClose={() => setModal(null)} onSubmit={submitClose} /> : null}
     </div>
   );
@@ -270,15 +265,21 @@ function PaymentMethodSelect({ name }: { name: string }) {
 
 function PaymentModal({ onClose, onSubmit, order, pending }: { onClose: () => void; onSubmit: (event: React.FormEvent<HTMLFormElement>) => void; order: OrderDetail; pending: boolean }) {
   const today = new Date().toISOString().slice(0, 10);
-  const defaultAmount = order.totalProductsAmount ?? order.totalAmount ?? order.total ?? "0.00";
+  const defaultAmount = order.items.reduce((sum, item) => sum + Number(item.total), 0).toFixed(2);
   return (
-    <ModalFrame onClose={onClose} title="Registrar pago">
+    <ModalFrame onClose={onClose} title="Pago de pedido">
       <form className="grid gap-3" onSubmit={onSubmit}>
+        <p className="rounded-lg bg-slate-50 p-3 text-sm text-slate-600">Registra solo el pago del contenido del pedido. El embalaje es fijo: S/ 2.00.</p>
+        <div className="grid gap-3 md:grid-cols-2">
         <TextField defaultValue={defaultAmount} label="Monto pagado" name="productPaymentAmount" required step="0.01" type="number" />
         <PaymentMethodSelect name="productPaymentMethod" />
         <TextField defaultValue={today} label="Fecha de pago" name="productPaymentDate" required type="date" />
-        <TextField label="Fecha programada de envio" name="scheduledShippingDate" type="date" />
+        <TextField label="Fecha aprox. envio/recojo" name="scheduledShippingDate" type="date" />
         <TextField defaultValue="2.00" label="Costo de embalaje" name="packagingCost" step="0.01" type="number" />
+        <label className="flex min-h-10 items-center gap-2 rounded-lg border border-slate-200 px-3 text-sm font-medium text-slate-700">
+          <input className="h-4 min-h-0 w-4" name="packagingPaid" type="checkbox" /> Cliente pago embalaje
+        </label>
+        </div>
         <label className="block text-sm font-medium text-slate-700">Observacion
           <textarea className="mt-1 min-h-20 w-full rounded-md border px-3 py-2" name="observation" />
         </label>
@@ -330,30 +331,29 @@ function PrepareModal({ onClose, onSubmit, order, pending }: { onClose: () => vo
   );
 }
 
-function PackagingModal({ onClose, onSubmit, pending }: { onClose: () => void; onSubmit: (event: React.FormEvent<HTMLFormElement>) => void; pending: boolean }) {
+function ShipModal({ onClose, onSubmit, order, pending }: { onClose: () => void; onSubmit: (event: React.FormEvent<HTMLFormElement>) => void; order: OrderDetail; pending: boolean }) {
   return (
-    <ModalFrame onClose={onClose} title="Registrar pago de embalaje">
+    <ModalFrame onClose={onClose} title="Enviar / entregar">
       <form className="grid gap-3" onSubmit={onSubmit}>
-        <TextField label="Monto pagado de embalaje" name="packagingPaymentAmount" required step="0.01" type="number" />
-        <PaymentMethodSelect name="packagingPaymentMethod" />
-        <TextField defaultValue={new Date().toISOString().slice(0, 10)} label="Fecha de pago de embalaje" name="packagingPaymentDate" required type="date" />
-        <ModalActions onClose={onClose} pending={pending} submitLabel="Registrar embalaje" />
-      </form>
-    </ModalFrame>
-  );
-}
-
-function ShipModal({ onClose, onSubmit, pending }: { onClose: () => void; onSubmit: (event: React.FormEvent<HTMLFormElement>) => void; pending: boolean }) {
-  return (
-    <ModalFrame onClose={onClose} title="Registrar envio">
-      <form className="grid gap-3" onSubmit={onSubmit}>
+        {!order.packagingPaymentConfirmed ? (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
+            <p className="text-sm font-medium text-amber-800">Embalaje pendiente</p>
+            <p className="mt-1 text-xs text-amber-700">Antes de enviar debes confirmar el pago fijo de S/ 2.00.</p>
+            <div className="mt-3 grid gap-3 md:grid-cols-3">
+              <TextField defaultValue="2.00" label="Monto embalaje" name="packagingPaymentAmount" required step="0.01" type="number" />
+              <PaymentMethodSelect name="packagingPaymentMethod" />
+              <TextField defaultValue={new Date().toISOString().slice(0, 10)} label="Fecha embalaje" name="packagingPaymentDate" required type="date" />
+            </div>
+          </div>
+        ) : null}
         <label className="block text-sm font-medium text-slate-700">Tipo de envio
           <select className="mt-1 h-10 w-full rounded-md border px-3" name="shippingType" required>
             <option value="MOTORIZED">Motorizado</option>
             <option value="COURIER">Courier</option>
+            <option value="PICKUP">Recojo en tienda</option>
           </select>
         </label>
-        <TextField label="Proveedor" name="providerName" required />
+        <TextField label="Proveedor si aplica" name="providerName" />
         <TextField label="Tracking si es courier" name="trackingNumber" />
         <TextField label="Numero de envio si es motorizado" name="deliveryOrderNumber" />
         <ModalActions onClose={onClose} pending={pending} submitLabel="Registrar envio" />

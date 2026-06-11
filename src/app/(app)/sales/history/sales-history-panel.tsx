@@ -14,6 +14,7 @@ type Sale = {
   totalAmount: string;
   electronicInvoiceStatus: string;
   electronicInvoiceType?: string | null;
+  source?: "STORE_SALE" | "ORDER";
 };
 
 export function SalesHistoryPanel() {
@@ -31,6 +32,7 @@ export function SalesHistoryPanel() {
             <th className="px-4 py-3">Codigo</th>
             <th className="px-4 py-3">Fecha</th>
             <th className="px-4 py-3">Pago</th>
+            <th className="px-4 py-3">Canal</th>
             <th className="px-4 py-3">Total</th>
             <th className="px-4 py-3">Facturacion</th>
           </tr>
@@ -41,11 +43,12 @@ export function SalesHistoryPanel() {
               <td className="px-4 py-3 font-medium">{sale.code}</td>
               <td className="px-4 py-3">{new Date(sale.saleDate).toLocaleString()}</td>
               <td className="px-4 py-3">{sale.paymentMethod}</td>
+              <td className="px-4 py-3">{sale.source === "ORDER" ? "Pedido" : "Tienda"}</td>
               <td className="px-4 py-3">S/ {sale.totalAmount}</td>
               <td className="px-4 py-3">{sale.electronicInvoiceType ?? "No requerida"} - {sale.electronicInvoiceStatus}</td>
             </tr>
           ))}
-          {!sales.length ? <tr><td colSpan={5}><EmptyState label="No hay ventas registradas." /></td></tr> : null}
+          {!sales.length ? <tr><td colSpan={6}><EmptyState label="No hay ventas registradas." /></td></tr> : null}
         </tbody>
       </table>
     </section>

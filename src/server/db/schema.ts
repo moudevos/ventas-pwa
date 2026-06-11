@@ -16,7 +16,7 @@ export const userRoleEnum = pgEnum("user_role", ["admin", "promoter"]);
 export const userStatusEnum = pgEnum("user_status", ["active", "inactive"]);
 export const productStatusEnum = pgEnum("product_status", ["active", "inactive"]);
 export const documentTypeEnum = pgEnum("document_type", ["DNI", "CEX", "GENERIC"]);
-export const shippingProviderTypeEnum = pgEnum("shipping_provider_type", ["MOTORIZED", "COURIER"]);
+export const shippingProviderTypeEnum = pgEnum("shipping_provider_type", ["MOTORIZED", "COURIER", "PICKUP"]);
 export const orderStatusEnum = pgEnum("order_status", [
   "CREATED",
   "REGISTERED",
